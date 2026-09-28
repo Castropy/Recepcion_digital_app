@@ -101,7 +101,7 @@ const RomanaScreen: React.FC = () => {
                             {sincronizando ? 'Sincronizando...' : 'Sincronizar'}
                         </Text>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => seleccionarRol('romana' as any)}>
+                    <TouchableOpacity onPress={() => seleccionarRol('romana')}>
                         <Text style={styles.textoCambiarRol}>Rol</Text>
                     </TouchableOpacity>
                 </View>
@@ -177,12 +177,23 @@ const RomanaScreen: React.FC = () => {
                         <TouchableOpacity
                             style={[
                                 styles.opcionSelector,
-                                variedad === 'acarigua_4_24' && styles.opcionSeleccionada,
+                                variedad === 'md_248' && styles.opcionSeleccionada,
                             ]}
-                            onPress={() => setVariedad('acarigua_4_24')}
+                            onPress={() => setVariedad('md_248')}
                         >
-                            <Text style={variedad === 'acarigua_4_24' ? styles.textoOpcionSeleccionada : styles.textoOpcion}>
-                                Acarigua 4-24
+                            <Text style={variedad === 'md_248' ? styles.textoOpcionSeleccionada : styles.textoOpcion}>
+                                MD 248
+                            </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[
+                                styles.opcionSelector,
+                                variedad === 'cimarron' && styles.opcionSeleccionada,
+                            ]}
+                            onPress={() => setVariedad('cimarron')}
+                        >
+                            <Text style={variedad === 'cimarron' ? styles.textoOpcionSeleccionada : styles.textoOpcion}>
+                                Cimarrón
                             </Text>
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -342,12 +353,12 @@ const styles = StyleSheet.create({
     },
     contenedorSelector: {
         flexDirection: 'row',
-        gap: 8,
+        gap: 6,
     },
     opcionSelector: {
         flex: 1,
         paddingVertical: 8,
-        paddingHorizontal: 6,
+        paddingHorizontal: 4,
         borderWidth: 1,
         borderColor: '#CBD5E1',
         borderRadius: 6,
@@ -359,12 +370,12 @@ const styles = StyleSheet.create({
         borderColor: '#2563EB',
     },
     textoOpcion: {
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: '600',
         color: '#475569',
     },
     textoOpcionSeleccionada: {
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: 'bold',
         color: '#FFFFFF',
     },
