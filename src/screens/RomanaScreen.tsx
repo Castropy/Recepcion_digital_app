@@ -12,14 +12,16 @@ import {
 import { useRecepcion } from '../context/RecepcionContext';
 import { useAuth } from '../context/AuthContext';
 import { RecepcionArroz, VariedadArroz } from '../types/recepcion';
+import { MetricCard } from '../components/MetricCard';
+import { StatusBadge } from '../components/StatusBadge';
 
 /**
- * Pantalla operativa para la estacion de Romana.
- * Captura datos de origen, transporte, peso bruto y peso tara.
+ * Pantalla operativa y dashboard para la estacion de Romana.
+ * Captura pesajes de entrada y salida, datos del transporte y muestra metricas de la jornada.
  */
 const RomanaScreen: React.FC = () => {
-    const { guardarRecepcion, sincronizarPendientes, sincronizando } = useRecepcion();
-    const { seleccionarRol, cerrarSesion } = useAuth();
+    const { recepciones, guardarRecepcion, sincronizarPendientes, sincronizando } = useRecepcion();
+    const { seleccionarRol } = useAuth();
 
     // Estados del formulario
     const [partnerId, setPartnerId] = useState<string>('');
@@ -31,13 +33,17 @@ const RomanaScreen: React.FC = () => {
     const [pesoBruto, setPesoBruto] = useState<string>('');
     const [pesoTara, setPesoTara] = useState<string>('');
 
-    // Calculo automatico de peso neto
+    // Calculos metricos para el dashboard
+    const totalCamiones = recepciones.length;
+    const totalKilos = recepciones.reduce((acum, item) => acum + (item.peso_neto || item.peso_bruto || 0), 0);
+
+    // Calculo automatico de peso neto en formulario
     const brutoNum = parseFloat(pesoBruto) || 0;
     const taraNum = parseFloat(pesoTara) || 0;
     const pesoNeto = brutoNum > taraNum ? brutoNum - taraNum : 0;
 
     /**
-     * Limpia los campos tras completar un registro exitoso.
+     * Limpia los campos del formulario tras completar un registro.
      */
     const reiniciarFormulario = () => {
         setPartnerId('');
@@ -102,7 +108,25 @@ const RomanaScreen: React.FC = () => {
             </View>
 
             <ScrollView contentContainerStyle={styles.contenidoScroll}>
-                <Text style={styles.seccionTitulo}>1. Datos del Origen y Transporte</Text>
+                {/* Dashboard Superior */}
+                <Text style={styles.seccionTitulo}>Métricas del Día</Text>
+                <View style={styles.contenedorMetricas}>
+                    <MetricCard
+                        titulo="Camiones Atendidos"
+                        valor={totalCamiones}
+                        subtexto="Registros locales"
+                        colorBorde="#2563EB"
+                    />
+                    <MetricCard
+                        titulo="Total Recibido"
+                        valor={`${(totalKilos / 1000).toFixed(1)} Tn`}
+                        subtexto={`${totalKilos.toLocaleString('es-VE')} Kg`}
+                        colorBorde="#16A34A"
+                    />
+                </View>
+
+                {/* Formulario de Entrada */}
+                <Text style={styles.seccionTitulo}>1. Datos de Origen y Transporte</Text>
 
                 <View style={styles.grupoCampo}>
                     <Text style={styles.etiqueta}>Productor / Cliente *</Text>
@@ -133,6 +157,45 @@ const RomanaScreen: React.FC = () => {
                             onChangeText={setVehiculoPlaca}
                             autoCapitalize="characters"
                         />
+                    </View>
+                </View>
+
+                <View style={styles.grupoCampo}>
+                    <Text style={styles.etiqueta}>Variedad de Arroz</Text>
+                    <View style={styles.contenedorSelector}>
+                        <TouchableOpacity
+                            style={[
+                                styles.opcionSelector,
+                                variedad === 'fl_supa' && styles.opcionSeleccionada,
+                            ]}
+                            onPress={() => setVariedad('fl_supa')}
+                        >
+                            <Text style={variedad === 'fl_supa' ? styles.textoOpcionSeleccionada : styles.textoOpcion}>
+                                FL SUPA
+                            </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[
+                                styles.opcionSelector,
+                                variedad === 'acarigua_4_24' && styles.opcionSeleccionada,
+                            ]}
+                            onPress={() => setVariedad('acarigua_4_24')}
+                        >
+                            <Text style={variedad === 'acarigua_4_24' ? styles.textoOpcionSeleccionada : styles.textoOpcion}>
+                                Acarigua 4-24
+                            </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[
+                                styles.opcionSelector,
+                                variedad === 'otra' && styles.opcionSeleccionada,
+                            ]}
+                            onPress={() => setVariedad('otra')}
+                        >
+                            <Text style={variedad === 'otra' ? styles.textoOpcionSeleccionada : styles.textoOpcion}>
+                                Otra
+                            </Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
 
@@ -183,7 +246,10 @@ const RomanaScreen: React.FC = () => {
                 </View>
 
                 <View style={styles.cajaPesoNeto}>
-                    <Text style={styles.etiquetaNeto}>PESO NETO CALCULADO:</Text>
+                    <View style={styles.filaNetoBadge}>
+                        <Text style={styles.etiquetaNeto}>PESO NETO CALCULADO</Text>
+                        <StatusBadge estado={pesoTara ? 'pesaje_final' : 'pesaje_inicial'} />
+                    </View>
                     <Text style={styles.valorNeto}>{pesoNeto.toLocaleString('es-VE')} Kg</Text>
                 </View>
 
@@ -237,11 +303,16 @@ const styles = StyleSheet.create({
         padding: 16,
     },
     seccionTitulo: {
-        fontSize: 16,
+        fontSize: 15,
         fontWeight: 'bold',
         color: '#1E293B',
         marginTop: 12,
-        marginBottom: 12,
+        marginBottom: 8,
+    },
+    contenedorMetricas: {
+        flexDirection: 'row',
+        gap: 12,
+        marginBottom: 8,
     },
     grupoCampo: {
         marginBottom: 12,
@@ -269,14 +340,46 @@ const styles = StyleSheet.create({
         fontSize: 15,
         color: '#0F172A',
     },
+    contenedorSelector: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    opcionSelector: {
+        flex: 1,
+        paddingVertical: 8,
+        paddingHorizontal: 6,
+        borderWidth: 1,
+        borderColor: '#CBD5E1',
+        borderRadius: 6,
+        backgroundColor: '#FFFFFF',
+        alignItems: 'center',
+    },
+    opcionSeleccionada: {
+        backgroundColor: '#2563EB',
+        borderColor: '#2563EB',
+    },
+    textoOpcion: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#475569',
+    },
+    textoOpcionSeleccionada: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        color: '#FFFFFF',
+    },
     cajaPesoNeto: {
         backgroundColor: '#EFF6FF',
         borderWidth: 1,
         borderColor: '#BFDBFE',
         borderRadius: 8,
-        padding: 16,
+        padding: 14,
+        marginVertical: 12,
+    },
+    filaNetoBadge: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        marginVertical: 16,
     },
     etiquetaNeto: {
         fontSize: 12,
