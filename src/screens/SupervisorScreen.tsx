@@ -14,10 +14,11 @@ import { useAuth } from '../context/AuthContext';
 import { RecepcionArroz } from '../types/recepcion';
 import { MetricCard } from '../components/MetricCard';
 import { StatusBadge } from '../components/StatusBadge';
+import { AuditLogModal } from '../components/AuditLogModal';
 
 /**
  * Pantalla para la estación de Supervisión.
- * Permite la revisión, aprobación final, métricas globales y edición auditada de recepciones.
+ * Permite la revisión, aprobación final, métricas globales, consulta de auditoría y edición auditada de recepciones.
  */
 const SupervisorScreen: React.FC = () => {
     const { recepciones, guardarRecepcion, sincronizarPendientes, sincronizando } = useRecepcion();
@@ -27,6 +28,10 @@ const SupervisorScreen: React.FC = () => {
     const [pesoBruto, setPesoBruto] = useState<string>('');
     const [porcentajeHumedad, setPorcentajeHumedad] = useState<string>('');
     const [motivoModificacion, setMotivoModificacion] = useState<string>('');
+
+    // Control del modal de auditoria
+    const [modalAuditoriaVisible, setModalAuditoriaVisible] = useState<boolean>(false);
+    const [recepcionAuditoria, setRecepcionAuditoria] = useState<RecepcionArroz | null>(null);
 
     // Métricas generales del sistema para el supervisor
     const total = recepciones.length;
@@ -44,6 +49,14 @@ const SupervisorScreen: React.FC = () => {
         setPesoBruto(registro.peso_bruto ? registro.peso_bruto.toString() : '');
         setPorcentajeHumedad(registro.porcentaje_humedad ? registro.porcentaje_humedad.toString() : '');
         setMotivoModificacion('');
+    };
+
+    /**
+     * Abre el modal de auditoria para un registro especifico.
+     */
+    const abrirAuditoria = (registro: RecepcionArroz) => {
+        setRecepcionAuditoria(registro);
+        setModalAuditoriaVisible(true);
     };
 
     /**
@@ -75,6 +88,7 @@ const SupervisorScreen: React.FC = () => {
             peso_bruto: brutoActual,
             porcentaje_humedad: humedadActual,
             motivo_modificacion: motivoModificacion.trim() || undefined,
+            fecha_modificacion_local: new Date().toISOString(),
             state: nuevoEstado || recepcionSeleccionada.state,
         };
 
@@ -127,6 +141,7 @@ const SupervisorScreen: React.FC = () => {
                         colorBorde="#2563EB"
                     />
                 </View>
+
                 <View style={[styles.gridMetricas, { marginTop: 8 }]}>
                     <MetricCard
                         titulo="Completadas"
@@ -170,9 +185,18 @@ const SupervisorScreen: React.FC = () => {
                                     <Text style={styles.itemSubtitulo}>
                                         Placa: {item.vehiculo_placa} | Productor: {item.partner_id}
                                     </Text>
-                                    <Text style={styles.itemDetalles}>
-                                        Peso Bruto: {item.peso_bruto || 0} Kg | Humedad: {item.porcentaje_humedad || 0}%
-                                    </Text>
+
+                                    <View style={styles.filaInferiorTarjeta}>
+                                        <Text style={styles.itemDetalles}>
+                                            Peso Bruto: {item.peso_bruto || 0} Kg | Humedad: {item.porcentaje_humedad || 0}%
+                                        </Text>
+                                        <TouchableOpacity
+                                            style={styles.botonVerAuditoria}
+                                            onPress={() => abrirAuditoria(item)}
+                                        >
+                                            <Text style={styles.textoBotonVerAuditoria}>🔍 Auditoría</Text>
+                                        </TouchableOpacity>
+                                    </View>
                                 </TouchableOpacity>
                             );
                         })
@@ -182,9 +206,17 @@ const SupervisorScreen: React.FC = () => {
                 {/* Formulario de Edición Auditada */}
                 {recepcionSeleccionada && (
                     <>
-                        <Text style={styles.seccionTitulo}>
-                            2. Revisión y Ajustes: {recepcionSeleccionada.guia_sica}
-                        </Text>
+                        <View style={styles.encabezadoFormularioEdicion}>
+                            <Text style={styles.seccionTituloFormulario}>
+                                2. Revisión: Guía {recepcionSeleccionada.guia_sica}
+                            </Text>
+                            <TouchableOpacity
+                                style={styles.botonVerAuditoriaFormulario}
+                                onPress={() => abrirAuditoria(recepcionSeleccionada)}
+                            >
+                                <Text style={styles.textoBotonVerAuditoriaFormulario}>Ver Historial</Text>
+                            </TouchableOpacity>
+                        </View>
 
                         <View style={styles.grupoCampo}>
                             <Text style={styles.etiqueta}>Peso Bruto (Kg)</Text>
@@ -236,6 +268,13 @@ const SupervisorScreen: React.FC = () => {
                     </>
                 )}
             </ScrollView>
+
+            {/* Modal Reutilizable de Auditoria */}
+            <AuditLogModal
+                visible={modalAuditoriaVisible}
+                recepcion={recepcionAuditoria}
+                onClose={() => setModalAuditoriaVisible(false)}
+            />
         </SafeAreaView>
     );
 };
@@ -328,11 +367,50 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#64748B',
     },
+    filaInferiorTarjeta: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 6,
+    },
     itemDetalles: {
         fontSize: 11,
         color: '#7C3AED',
         fontWeight: '600',
-        marginTop: 4,
+    },
+    botonVerAuditoria: {
+        backgroundColor: '#EDE9FE',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 4,
+    },
+    textoBotonVerAuditoria: {
+        fontSize: 11,
+        color: '#6D28D9',
+        fontWeight: 'bold',
+    },
+    encabezadoFormularioEdicion: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 12,
+        marginBottom: 8,
+    },
+    seccionTituloFormulario: {
+        fontSize: 15,
+        fontWeight: 'bold',
+        color: '#1E293B',
+    },
+    botonVerAuditoriaFormulario: {
+        backgroundColor: '#7C3AED',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 6,
+    },
+    textoBotonVerAuditoriaFormulario: {
+        fontSize: 11,
+        color: '#FFFFFF',
+        fontWeight: 'bold',
     },
     grupoCampo: {
         marginBottom: 12,
