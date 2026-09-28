@@ -6,7 +6,7 @@ import { RecepcionArroz, RespuestaApiOdoo, UsuarioSesion } from '../types/recepc
  * Maneja autenticacion, envio de recepciones y sincronizacion offline.
  */
 
-// URL Base del servidor Odoo (Ajustar IP o dominio segun el entorno de red local/servidor)
+// URL Base del servidor Odoo
 const ODOO_BASE_URL = 'http://192.168.1.122:8069';
 
 const apiClient = axios.create({
@@ -27,8 +27,9 @@ export class ApiService {
                 jsonrpc: '2.0',
                 method: 'call',
                 params: {
-                    login,
-                    password,
+                    db: 'recepcion_digital_db',
+                    login: login.trim(),
+                    password: password.trim(),
                 },
             });
 
@@ -42,16 +43,17 @@ export class ApiService {
                         name: data.name,
                         login: data.login,
                         session_id: data.session_id,
+                        role: data.role,
                     },
                 };
             }
 
             return {
                 status: 'error',
-                message: data?.message || 'Error de autenticacion con Odoo.',
+                message: data?.message || 'Error de autenticación con Odoo.',
             };
         } catch (error: any) {
-            console.error('Error durante la peticion de login:', error);
+            console.error('Error durante la petición de login:', error);
             return {
                 status: 'error',
                 message: error.message || 'No se pudo conectar con el servidor Odoo.',
@@ -73,6 +75,7 @@ export class ApiService {
                     jsonrpc: '2.0',
                     method: 'call',
                     params: {
+                        db: 'recepcion_digital_db',
                         local_id: recepcion.local_id,
                         id: recepcion.id,
                         valores: {
@@ -114,14 +117,14 @@ export class ApiService {
             return {
                 status: 'error',
                 local_id: recepcion.local_id,
-                message: data?.message || 'Error al procesar la sincronizacion en Odoo.',
+                message: data?.message || 'Error al procesar la sincronización en Odoo.',
             };
         } catch (error: any) {
-            console.error('Error al sincronizar recepcion con Odoo:', error);
+            console.error('Error al sincronizar recepción con Odoo:', error);
             return {
                 status: 'error',
                 local_id: recepcion.local_id,
-                message: error.message || 'Error de conexion de red con Odoo.',
+                message: error.message || 'Error de conexión de red con Odoo.',
             };
         }
     }
