@@ -12,10 +12,12 @@ import {
 import { useRecepcion } from '../context/RecepcionContext';
 import { useAuth } from '../context/AuthContext';
 import { RecepcionArroz } from '../types/recepcion';
+import { MetricCard } from '../components/MetricCard';
+import { StatusBadge } from '../components/StatusBadge';
 
 /**
- * Pantalla para la estacion de Supervision.
- * Permite la revision, aprobacion final y edicion auditada de recepciones.
+ * Pantalla para la estación de Supervisión.
+ * Permite la revisión, aprobación final, métricas globales y edición auditada de recepciones.
  */
 const SupervisorScreen: React.FC = () => {
     const { recepciones, guardarRecepcion, sincronizarPendientes, sincronizando } = useRecepcion();
@@ -25,6 +27,14 @@ const SupervisorScreen: React.FC = () => {
     const [pesoBruto, setPesoBruto] = useState<string>('');
     const [porcentajeHumedad, setPorcentajeHumedad] = useState<string>('');
     const [motivoModificacion, setMotivoModificacion] = useState<string>('');
+
+    // Métricas generales del sistema para el supervisor
+    const total = recepciones.length;
+    const completadas = recepciones.filter((r) => r.state === 'completado').length;
+    const enProceso = recepciones.filter(
+        (r) => r.state === 'pesaje_inicial' || r.state === 'laboratorio' || r.state === 'pesaje_final'
+    ).length;
+    const borradores = recepciones.filter((r) => r.state === 'borrador').length;
 
     /**
      * Carga los datos del registro en los campos modificables.
@@ -37,7 +47,7 @@ const SupervisorScreen: React.FC = () => {
     };
 
     /**
-     * Procesa la edicion o aprobacion final del registro auditado.
+     * Procesa la edición o aprobación final del registro auditado.
      */
     const manejarAprobarOEditar = async (nuevoEstado: 'completado' | 'cancelado' | undefined) => {
         if (!recepcionSeleccionada) {
@@ -45,7 +55,7 @@ const SupervisorScreen: React.FC = () => {
             return;
         }
 
-        // Si hubo cambios en los valores, exigir motivo de modificacion
+        // Si hubo cambios en los valores, exigir motivo de modificación
         const brutoActual = parseFloat(pesoBruto) || 0;
         const humedadActual = parseFloat(porcentajeHumedad) || 0;
         const huboCambios =
@@ -94,39 +104,82 @@ const SupervisorScreen: React.FC = () => {
                             {sincronizando ? 'Sincronizando...' : 'Sincronizar'}
                         </Text>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => seleccionarRol('supervisor' as any)}>
+                    <TouchableOpacity onPress={() => seleccionarRol('supervisor')}>
                         <Text style={styles.textoCambiarRol}>Rol</Text>
                     </TouchableOpacity>
                 </View>
             </View>
 
             <ScrollView contentContainerStyle={styles.contenidoScroll}>
+                {/* Dashboard Métricas Globales */}
+                <Text style={styles.seccionTitulo}>Métricas del Proceso</Text>
+                <View style={styles.gridMetricas}>
+                    <MetricCard
+                        titulo="Total Registros"
+                        valor={total}
+                        subtexto="Lotes procesados"
+                        colorBorde="#7C3AED"
+                    />
+                    <MetricCard
+                        titulo="En Proceso"
+                        valor={enProceso}
+                        subtexto="Báscula / Lab"
+                        colorBorde="#2563EB"
+                    />
+                </View>
+                <View style={[styles.gridMetricas, { marginTop: 8 }]}>
+                    <MetricCard
+                        titulo="Completadas"
+                        valor={completadas}
+                        subtexto="Finalizadas"
+                        colorBorde="#16A34A"
+                    />
+                    <MetricCard
+                        titulo="Borradores"
+                        valor={borradores}
+                        subtexto="Sin confirmar"
+                        colorBorde="#D97706"
+                    />
+                </View>
+
+                {/* Registros en Cola General */}
                 <Text style={styles.seccionTitulo}>1. Registros en Cola General</Text>
 
                 <View style={styles.listaContenedor}>
                     {recepciones.length === 0 ? (
                         <Text style={styles.textoVacio}>No hay recepciones guardadas localmente.</Text>
                     ) : (
-                        recepciones.map((item, index) => (
-                            <TouchableOpacity
-                                key={item.local_id || index}
-                                style={[
-                                    styles.tarjetaItem,
-                                    recepcionSeleccionada?.local_id === item.local_id && styles.tarjetaSeleccionada,
-                                ]}
-                                onPress={() => seleccionarRegistro(item)}
-                            >
-                                <Text style={styles.itemTitulo}>
-                                    Guía: {item.guia_sica} | Placa: {item.vehiculo_placa}
-                                </Text>
-                                <Text style={styles.itemSubtitulo}>
-                                    Estado: {item.state} | Sincronizado: {item.sincronizado ? 'Sí' : 'No'}
-                                </Text>
-                            </TouchableOpacity>
-                        ))
+                        recepciones.map((item, index) => {
+                            const esSeleccionado = Boolean(
+                                (recepcionSeleccionada?.local_id && recepcionSeleccionada.local_id === item.local_id) ||
+                                (recepcionSeleccionada?.id && item.id && recepcionSeleccionada.id === item.id)
+                            );
+                            return (
+                                <TouchableOpacity
+                                    key={item.local_id || item.id || index}
+                                    style={[
+                                        styles.tarjetaItem,
+                                        esSeleccionado ? styles.tarjetaSeleccionada : null,
+                                    ]}
+                                    onPress={() => seleccionarRegistro(item)}
+                                >
+                                    <View style={styles.encabezadoTarjeta}>
+                                        <Text style={styles.itemTitulo}>Guía: {item.guia_sica}</Text>
+                                        <StatusBadge estado={item.state} />
+                                    </View>
+                                    <Text style={styles.itemSubtitulo}>
+                                        Placa: {item.vehiculo_placa} | Productor: {item.partner_id}
+                                    </Text>
+                                    <Text style={styles.itemDetalles}>
+                                        Peso Bruto: {item.peso_bruto || 0} Kg | Humedad: {item.porcentaje_humedad || 0}%
+                                    </Text>
+                                </TouchableOpacity>
+                            );
+                        })
                     )}
                 </View>
 
+                {/* Formulario de Edición Auditada */}
                 {recepcionSeleccionada && (
                     <>
                         <Text style={styles.seccionTitulo}>
@@ -229,11 +282,15 @@ const styles = StyleSheet.create({
         padding: 16,
     },
     seccionTitulo: {
-        fontSize: 16,
+        fontSize: 15,
         fontWeight: 'bold',
         color: '#1E293B',
         marginTop: 12,
-        marginBottom: 12,
+        marginBottom: 8,
+    },
+    gridMetricas: {
+        flexDirection: 'row',
+        gap: 12,
     },
     listaContenedor: {
         marginBottom: 16,
@@ -256,6 +313,12 @@ const styles = StyleSheet.create({
         borderColor: '#7C3AED',
         backgroundColor: '#F5F3FF',
     },
+    encabezadoTarjeta: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 4,
+    },
     itemTitulo: {
         fontSize: 14,
         fontWeight: 'bold',
@@ -264,7 +327,12 @@ const styles = StyleSheet.create({
     itemSubtitulo: {
         fontSize: 12,
         color: '#64748B',
-        marginTop: 2,
+    },
+    itemDetalles: {
+        fontSize: 11,
+        color: '#7C3AED',
+        fontWeight: '600',
+        marginTop: 4,
     },
     grupoCampo: {
         marginBottom: 12,

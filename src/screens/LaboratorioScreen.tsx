@@ -122,13 +122,16 @@ const LaboratorioScreen: React.FC = () => {
                         <Text style={styles.textoVacio}>No hay recepciones registradas en el dispositivo.</Text>
                     ) : (
                         recepciones.map((item, index) => {
-                            const esSeleccionado = recepcionSeleccionada?.local_id === item.local_id || (item.id && recepcionSeleccionada?.id === item.id);
+                            const esSeleccionado = Boolean(
+                                (recepcionSeleccionada?.local_id && recepcionSeleccionada.local_id === item.local_id) ||
+                                (recepcionSeleccionada?.id && item.id && recepcionSeleccionada.id === item.id)
+                            );
                             return (
                                 <TouchableOpacity
                                     key={item.local_id || item.id || index}
                                     style={[
                                         styles.tarjetaItem,
-                                        esSeleccionado && styles.tarjetaSeleccionada,
+                                        esSeleccionado ? styles.tarjetaSeleccionada : null,
                                     ]}
                                     onPress={() => seleccionarRegistro(item)}
                                 >
