@@ -7,7 +7,7 @@ import { RecepcionArroz, RespuestaApiOdoo, UsuarioSesion } from '../types/recepc
  */
 
 // URL Base del servidor Odoo (Ajustar IP o dominio segun el entorno de red local/servidor)
-const ODOO_BASE_URL = 'http://192.168.1.100:8069';
+const ODOO_BASE_URL = 'http://192.168.1.122:8069';
 
 const apiClient = axios.create({
     baseURL: ODOO_BASE_URL,
