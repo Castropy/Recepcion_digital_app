@@ -1,3 +1,4 @@
+// src/screens/RomanaScreen.tsx
 import React, { useState } from 'react';
 import {
     StyleSheet,
@@ -14,10 +15,12 @@ import { useAuth } from '../context/AuthContext';
 import { RecepcionArroz, VariedadArroz } from '../types/recepcion';
 import { MetricCard } from '../components/MetricCard';
 import { StatusBadge } from '../components/StatusBadge';
+import { SyncQueueService } from '../services/SyncQueueService';
 
 /**
- * Pantalla operativa y dashboard para la estacion de Romana.
- * Captura pesajes de entrada y salida, datos del transporte y muestra metricas de la jornada.
+ * Pantalla operativa y dashboard para la estación de Romana.
+ * Captura pesajes de entrada y salida, datos del transporte y muestra métricas de la jornada.
+ * Soporta encolamiento offline-first en caso de fallos de red.
  */
 const RomanaScreen: React.FC = () => {
     const { recepciones, guardarRecepcion, sincronizarPendientes, sincronizando } = useRecepcion();
@@ -33,11 +36,11 @@ const RomanaScreen: React.FC = () => {
     const [pesoBruto, setPesoBruto] = useState<string>('');
     const [pesoTara, setPesoTara] = useState<string>('');
 
-    // Calculos metricos para el dashboard
+    // Cálculos métricos para el dashboard
     const totalCamiones = recepciones.length;
     const totalKilos = recepciones.reduce((acum, item) => acum + (item.peso_neto || item.peso_bruto || 0), 0);
 
-    // Calculo automatico de peso neto en formulario
+    // Cálculo automático de peso neto en formulario
     const brutoNum = parseFloat(pesoBruto) || 0;
     const taraNum = parseFloat(pesoTara) || 0;
     const pesoNeto = brutoNum > taraNum ? brutoNum - taraNum : 0;
@@ -56,7 +59,7 @@ const RomanaScreen: React.FC = () => {
     };
 
     /**
-     * Valida y guarda el registro de romana en la memoria local.
+     * Valida y guarda el registro de romana localmente y en la cola de sincronización.
      */
     const manejarGuardar = async () => {
         if (!partnerId.trim() || !guiaSica.trim() || !vehiculoPlaca.trim() || !pesoBruto.trim()) {
@@ -79,11 +82,19 @@ const RomanaScreen: React.FC = () => {
         };
 
         try {
+            // Guardado en contexto local
             await guardarRecepcion(nuevaRecepcion);
-            Alert.alert('Guardado Exitoso', 'La recepción se guardó localmente en la cola de romana.');
+
+            // Encolamiento en la cola offline SyncQueueService para sincronización posterior con Odoo
+            await SyncQueueService.enqueue('/api/recepcion/sincronizar', nuevaRecepcion);
+
+            Alert.alert(
+                'Registro Exitoso',
+                'La recepción se guardó localmente y se ha añadido a la cola de sincronización.'
+            );
             reiniciarFormulario();
         } catch (error) {
-            Alert.alert('Error', 'No se pudo guardar la recepción en la memoria local.');
+            Alert.alert('Error', 'No se pudo guardar la recepción ni encolarla en la memoria local.');
         }
     };
 
