@@ -1,3 +1,4 @@
+// src/screens/SupervisorScreen.tsx
 import React, { useState } from 'react';
 import {
     StyleSheet,
@@ -15,10 +16,12 @@ import { RecepcionArroz } from '../types/recepcion';
 import { MetricCard } from '../components/MetricCard';
 import { StatusBadge } from '../components/StatusBadge';
 import { AuditLogModal } from '../components/AuditLogModal';
+import { SyncQueueService } from '../services/SyncQueueService';
 
 /**
  * Pantalla para la estación de Supervisión.
  * Permite la revisión, aprobación final, métricas globales, consulta de auditoría y edición auditada de recepciones.
+ * Soporta encolamiento offline-first en SyncQueueService para sincronización posterior con Odoo.
  */
 const SupervisorScreen: React.FC = () => {
     const { recepciones, guardarRecepcion, sincronizarPendientes, sincronizando } = useRecepcion();
@@ -29,7 +32,7 @@ const SupervisorScreen: React.FC = () => {
     const [porcentajeHumedad, setPorcentajeHumedad] = useState<string>('');
     const [motivoModificacion, setMotivoModificacion] = useState<string>('');
 
-    // Control del modal de auditoria
+    // Control del modal de auditoría
     const [modalAuditoriaVisible, setModalAuditoriaVisible] = useState<boolean>(false);
     const [recepcionAuditoria, setRecepcionAuditoria] = useState<RecepcionArroz | null>(null);
 
@@ -52,7 +55,7 @@ const SupervisorScreen: React.FC = () => {
     };
 
     /**
-     * Abre el modal de auditoria para un registro especifico.
+     * Abre el modal de auditoría para un registro específico.
      */
     const abrirAuditoria = (registro: RecepcionArroz) => {
         setRecepcionAuditoria(registro);
@@ -60,7 +63,7 @@ const SupervisorScreen: React.FC = () => {
     };
 
     /**
-     * Procesa la edición o aprobación final del registro auditado.
+     * Procesa la edición o aprobación final del registro auditado y lo encola para sincronización.
      */
     const manejarAprobarOEditar = async (nuevoEstado: 'completado' | 'cancelado' | undefined) => {
         if (!recepcionSeleccionada) {
@@ -93,14 +96,22 @@ const SupervisorScreen: React.FC = () => {
         };
 
         try {
+            // Guardado local en el contexto
             await guardarRecepcion(registroActualizado);
-            Alert.alert('Registro Actualizado', 'La recepción fue actualizada y guardada exitosamente.');
+
+            // Encolamiento en SyncQueueService para envío automático a Odoo
+            await SyncQueueService.enqueue('/api/recepcion/sincronizar', registroActualizado);
+
+            Alert.alert(
+                'Registro Actualizado',
+                'La recepción fue actualizada localmente y añadida a la cola de sincronización.'
+            );
             setRecepcionSeleccionada(null);
             setPesoBruto('');
             setPorcentajeHumedad('');
             setMotivoModificacion('');
         } catch (error) {
-            Alert.alert('Error', 'No se pudieron actualizar los datos del registro.');
+            Alert.alert('Error', 'No se pudieron actualizar ni encolar los datos del registro.');
         }
     };
 
@@ -269,7 +280,7 @@ const SupervisorScreen: React.FC = () => {
                 )}
             </ScrollView>
 
-            {/* Modal Reutilizable de Auditoria */}
+            {/* Modal Reutilizable de Auditoría */}
             <AuditLogModal
                 visible={modalAuditoriaVisible}
                 recepcion={recepcionAuditoria}
