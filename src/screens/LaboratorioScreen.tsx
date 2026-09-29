@@ -1,3 +1,4 @@
+// src/screens/LaboratorioScreen.tsx
 import React, { useState } from 'react';
 import {
     StyleSheet,
@@ -14,10 +15,12 @@ import { useAuth } from '../context/AuthContext';
 import { RecepcionArroz } from '../types/recepcion';
 import { MetricCard } from '../components/MetricCard';
 import { StatusBadge } from '../components/StatusBadge';
+import { SyncQueueService } from '../services/SyncQueueService';
 
 /**
  * Pantalla operativa y dashboard para la estación de Laboratorio.
  * Permite seleccionar recepciones pendientes y registrar análisis de calidad (% humedad, % impureza, % grano rojo).
+ * Integra encolamiento offline-first para sincronización posterior con Odoo.
  */
 const LaboratorioScreen: React.FC = () => {
     const { recepciones, guardarRecepcion, sincronizarPendientes, sincronizando } = useRecepcion();
@@ -43,7 +46,7 @@ const LaboratorioScreen: React.FC = () => {
     };
 
     /**
-     * Valida y guarda los resultados del análisis de laboratorio.
+     * Valida y guarda los resultados del análisis de laboratorio en el almacenamiento local y en la cola de sincronización.
      */
     const manejarGuardar = async () => {
         if (!recepcionSeleccionada) {
@@ -65,14 +68,22 @@ const LaboratorioScreen: React.FC = () => {
         };
 
         try {
+            // Guardado en el contexto local del dispositivo
             await guardarRecepcion(registroActualizado);
-            Alert.alert('Análisis Guardado', 'Los datos del laboratorio se asociaron a la recepción exitosamente.');
+
+            // Encolamiento en SyncQueueService para envío automático a Odoo
+            await SyncQueueService.enqueue('/api/recepcion/sincronizar', registroActualizado);
+
+            Alert.alert(
+                'Análisis Guardado',
+                'Los datos del laboratorio se guardaron localmente y se añadieron a la cola de sincronización.'
+            );
             setRecepcionSeleccionada(null);
             setPorcentajeHumedad('');
             setPorcentajeImpureza('');
             setPorcentajeGranoRojo('');
         } catch (error) {
-            Alert.alert('Error', 'No se pudieron guardar los análisis en la memoria local.');
+            Alert.alert('Error', 'No se pudieron guardar ni encolar los análisis en la memoria local.');
         }
     };
 
