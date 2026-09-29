@@ -11,20 +11,22 @@ import {
     SafeAreaView,
 } from 'react-native';
 import { useRecepcion } from '../context/RecepcionContext';
-import { useAuth } from '../context/AuthContext';
 import { RecepcionArroz } from '../types/recepcion';
 import { MetricCard } from '../components/MetricCard';
 import { StatusBadge } from '../components/StatusBadge';
 import { SyncQueueService } from '../services/SyncQueueService';
+import { HeaderMenuModal } from '../components/HeaderMenuModal';
 
 /**
  * Pantalla operativa y dashboard para la estación de Laboratorio.
  * Permite seleccionar recepciones pendientes y registrar análisis de calidad (% humedad, % impureza, % grano rojo).
- * Integra encolamiento offline-first para sincronización posterior con Odoo.
+ * Integra encolamiento offline-first e interfaz con menú lateral hamburguesa.
  */
 const LaboratorioScreen: React.FC = () => {
     const { recepciones, guardarRecepcion, sincronizarPendientes, sincronizando } = useRecepcion();
-    const { seleccionarRol } = useAuth();
+
+    // Estado para controlar la visibilidad del menú hamburguesa
+    const [menuVisible, setMenuVisible] = useState<boolean>(false);
 
     const [recepcionSeleccionada, setRecepcionSeleccionada] = useState<RecepcionArroz | null>(null);
     const [porcentajeHumedad, setPorcentajeHumedad] = useState<string>('');
@@ -90,21 +92,19 @@ const LaboratorioScreen: React.FC = () => {
     return (
         <SafeAreaView style={styles.contenedorPantalla}>
             <View style={styles.barraSuperior}>
-                <Text style={styles.tituloEstacion}>Estación: LABORATORIO</Text>
-                <View style={styles.contenedorAccionesBarra}>
-                    <TouchableOpacity
-                        style={styles.botonSincronizar}
-                        onPress={sincronizarPendientes}
-                        disabled={sincronizando}
-                    >
-                        <Text style={styles.textoBotonSincronizar}>
-                            {sincronizando ? 'Sincronizando...' : 'Sincronizar'}
-                        </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => seleccionarRol('laboratorio')}>
-                        <Text style={styles.textoCambiarRol}>Rol</Text>
-                    </TouchableOpacity>
-                </View>
+                <TouchableOpacity style={styles.botonHamburguesa} onPress={() => setMenuVisible(true)}>
+                    <Text style={styles.textoHamburguesa}>☰</Text>
+                </TouchableOpacity>
+                <Text style={styles.tituloEstacion}>LABORATORIO</Text>
+                <TouchableOpacity
+                    style={styles.botonSincronizar}
+                    onPress={sincronizarPendientes}
+                    disabled={sincronizando}
+                >
+                    <Text style={styles.textoBotonSincronizar}>
+                        {sincronizando ? 'Sincronizando...' : 'Sincronizar'}
+                    </Text>
+                </TouchableOpacity>
             </View>
 
             <ScrollView contentContainerStyle={styles.contenidoScroll}>
@@ -210,6 +210,12 @@ const LaboratorioScreen: React.FC = () => {
                     </>
                 )}
             </ScrollView>
+
+            {/* Modal de Menú Lateral Hamburguesa */}
+            <HeaderMenuModal
+                visible={menuVisible}
+                onClose={() => setMenuVisible(false)}
+            />
         </SafeAreaView>
     );
 };
@@ -227,15 +233,18 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
     },
+    botonHamburguesa: {
+        padding: 4,
+    },
+    textoHamburguesa: {
+        color: '#FFFFFF',
+        fontSize: 22,
+        fontWeight: 'bold',
+    },
     tituloEstacion: {
         color: '#FFFFFF',
         fontSize: 16,
         fontWeight: 'bold',
-    },
-    contenedorAccionesBarra: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
     },
     botonSincronizar: {
         backgroundColor: '#B45309',
@@ -247,10 +256,6 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
         fontSize: 12,
         fontWeight: '600',
-    },
-    textoCambiarRol: {
-        color: '#FEF3C7',
-        fontSize: 13,
     },
     contenidoScroll: {
         padding: 16,
