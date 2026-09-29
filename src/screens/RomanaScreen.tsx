@@ -11,20 +11,22 @@ import {
     SafeAreaView,
 } from 'react-native';
 import { useRecepcion } from '../context/RecepcionContext';
-import { useAuth } from '../context/AuthContext';
 import { RecepcionArroz, VariedadArroz } from '../types/recepcion';
 import { MetricCard } from '../components/MetricCard';
 import { StatusBadge } from '../components/StatusBadge';
 import { SyncQueueService } from '../services/SyncQueueService';
+import { HeaderMenuModal } from '../components/HeaderMenuModal';
 
 /**
  * Pantalla operativa y dashboard para la estación de Romana.
  * Captura pesajes de entrada y salida, datos del transporte y muestra métricas de la jornada.
- * Soporta encolamiento offline-first en caso de fallos de red.
+ * Soporta encolamiento offline-first e integra menú lateral hamburguesa.
  */
 const RomanaScreen: React.FC = () => {
     const { recepciones, guardarRecepcion, sincronizarPendientes, sincronizando } = useRecepcion();
-    const { seleccionarRol } = useAuth();
+
+    // Estado para el menú de hamburguesa
+    const [menuVisible, setMenuVisible] = useState<boolean>(false);
 
     // Estados del formulario
     const [partnerId, setPartnerId] = useState<string>('');
@@ -82,10 +84,7 @@ const RomanaScreen: React.FC = () => {
         };
 
         try {
-            // Guardado en contexto local
             await guardarRecepcion(nuevaRecepcion);
-
-            // Encolamiento en la cola offline SyncQueueService para sincronización posterior con Odoo
             await SyncQueueService.enqueue('/api/recepcion/sincronizar', nuevaRecepcion);
 
             Alert.alert(
@@ -101,21 +100,19 @@ const RomanaScreen: React.FC = () => {
     return (
         <SafeAreaView style={styles.contenedorPantalla}>
             <View style={styles.barraSuperior}>
-                <Text style={styles.tituloEstacion}>Estación: ROMANA</Text>
-                <View style={styles.contenedorAccionesBarra}>
-                    <TouchableOpacity
-                        style={styles.botonSincronizar}
-                        onPress={sincronizarPendientes}
-                        disabled={sincronizando}
-                    >
-                        <Text style={styles.textoBotonSincronizar}>
-                            {sincronizando ? 'Sincronizando...' : 'Sincronizar'}
-                        </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => seleccionarRol('romana')}>
-                        <Text style={styles.textoCambiarRol}>Rol</Text>
-                    </TouchableOpacity>
-                </View>
+                <TouchableOpacity style={styles.botonHamburguesa} onPress={() => setMenuVisible(true)}>
+                    <Text style={styles.textoHamburguesa}>☰</Text>
+                </TouchableOpacity>
+                <Text style={styles.tituloEstacion}>ROMANA</Text>
+                <TouchableOpacity
+                    style={styles.botonSincronizar}
+                    onPress={sincronizarPendientes}
+                    disabled={sincronizando}
+                >
+                    <Text style={styles.textoBotonSincronizar}>
+                        {sincronizando ? 'Sincronizando...' : 'Sincronizar'}
+                    </Text>
+                </TouchableOpacity>
             </View>
 
             <ScrollView contentContainerStyle={styles.contenidoScroll}>
@@ -279,6 +276,12 @@ const RomanaScreen: React.FC = () => {
                     <Text style={styles.textoBotonGuardar}>Guardar Registro en Romana</Text>
                 </TouchableOpacity>
             </ScrollView>
+
+            {/* Modal de Menú Lateral Hamburguesa */}
+            <HeaderMenuModal
+                visible={menuVisible}
+                onClose={() => setMenuVisible(false)}
+            />
         </SafeAreaView>
     );
 };
@@ -296,15 +299,18 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
     },
+    botonHamburguesa: {
+        padding: 4,
+    },
+    textoHamburguesa: {
+        color: '#FFFFFF',
+        fontSize: 22,
+        fontWeight: 'bold',
+    },
     tituloEstacion: {
         color: '#FFFFFF',
         fontSize: 16,
         fontWeight: 'bold',
-    },
-    contenedorAccionesBarra: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
     },
     botonSincronizar: {
         backgroundColor: '#1D4ED8',
@@ -316,10 +322,6 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
         fontSize: 12,
         fontWeight: '600',
-    },
-    textoCambiarRol: {
-        color: '#E0F2FE',
-        fontSize: 13,
     },
     contenidoScroll: {
         padding: 16,
