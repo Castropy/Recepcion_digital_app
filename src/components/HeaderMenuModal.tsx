@@ -20,16 +20,27 @@ interface HeaderMenuModalProps {
  * Despliega los datos del usuario autenticado, su rol activo y la opción de cerrar sesión.
  */
 export const HeaderMenuModal: React.FC<HeaderMenuModalProps> = ({ visible, onClose }) => {
-    const { user, userRole, cerrarSesion, seleccionarRol } = useAuth();
+    const auth = useAuth() as any;
+
+    const user = auth.user || auth.usuario || auth.session?.user;
+    const userRole = auth.userRole || auth.rol || auth.role;
 
     const handleCerrarSesion = () => {
         onClose();
-        cerrarSesion();
+        if (auth.cerrarSesion) {
+            auth.cerrarSesion();
+        } else if (auth.logout) {
+            auth.logout();
+        }
     };
 
     const handleCambiarRol = () => {
         onClose();
-        seleccionarRol(null as any);
+        if (auth.seleccionarRol) {
+            auth.seleccionarRol(null);
+        } else if (auth.cambiarRol) {
+            auth.cambiarRol(null);
+        }
     };
 
     return (
@@ -51,14 +62,14 @@ export const HeaderMenuModal: React.FC<HeaderMenuModalProps> = ({ visible, onClo
                                     </Text>
                                 </View>
                                 <Text style={styles.nombreUsuario}>
-                                    {user?.nombre || 'Operador Odoo'}
+                                    {user?.nombre || user?.name || 'Operador Odoo'}
                                 </Text>
                                 <Text style={styles.cedulaUsuario}>
                                     {user?.cedula ? `C.I: ${user.cedula}` : 'Recepción Digital'}
                                 </Text>
                                 <View style={styles.badgeRol}>
                                     <Text style={styles.textoBadgeRol}>
-                                        ROL: {userRole ? userRole.toUpperCase() : 'SIN ROL'}
+                                        ROL: {userRole ? String(userRole).toUpperCase() : 'SIN ROL'}
                                     </Text>
                                 </View>
                             </View>
